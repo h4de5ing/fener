@@ -1,4 +1,4 @@
-![Fener Logo](https://github.com/galkan/fener/blob/master/images/fener_desc.png)  
+![Fener Logo](https://github.com/galkan/fener/blob/master/images/fener_desc3.png)  
 
 
 
