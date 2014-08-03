@@ -1,4 +1,4 @@
-![levye](https://github.com/galkan/fener/blob/master/images/fener_desc2.png)  
+![Fener](https://github.com/galkan/fener/blob/master/images/fener_desc2.png)  
 
 
 
