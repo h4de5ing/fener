@@ -9,18 +9,17 @@ Fener gathers information with 3 different methods
 - Passive scan
 - Screenshot scan 
 
-##Prerequisities
+###Prerequisities
 
 
 
-##Installation
+###Installation
 
 
-##Usage
+###Usage
 
 
-##Examples 
+###Examples 
 
 
-##Log Format
-
+###Log Format
