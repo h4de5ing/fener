@@ -21,7 +21,7 @@ Fener gathers information with 3 different methods:
 
 
 ###Installation
-
+..
 ''
 git clone https://github.com/galkan/fener/
 `` 
