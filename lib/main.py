@@ -8,16 +8,17 @@ try:
 	import os
 	import re
 	import sys
+	import time
 	import signal
 	import tempfile
 	import datetime
 	import argparse
 	import subprocess
-	from lib.core.threadpool import Worker,ThreadPool
-	from lib.core.config_parser import ConfigParser
+	from lib.nmap import Nmap
+	from threading import Thread	
 	from lib.core.iprange import IpRange	
-	from threading import Thread
-	from lib.nmap import Nmap		
+	from lib.core.config_parser import ConfigParser	
+	from lib.core.threadpool import Worker,ThreadPool				
 except ImportError,e:
         import sys
         sys.stdout.write("%s\n" %e)
@@ -47,13 +48,9 @@ class AddressAction(argparse.Action):
 				print >> sys.stderr, "usage: Usage: use --help for futher information\nfener.py: error: argument -t/--target is required"		
 				sys.exit(1)			
 
-		elif args.scan_type == "passive": 
-			if args.interface is None:
+		elif args.scan_type == "passive" and args.interface is None: 
 				print >> sys.stderr, "usage: Usage: use --help for futher information\nfener.py: error: argument -i/--interface is required"
 				sys.exit(1)
-			elif args.target is None:	
-				print >> sys.stderr, "usage: Usage: use --help for futher information\nfener.py: error: argument -t/--target is required"		
-				sys.exit(1)		
 			
 
 
@@ -61,13 +58,13 @@ class Main:
 		
 	def __init__(self):
 		
-		self.tcpdump_path = "/usr/sbin/tcpdump"
 		self.nmap_path = "/usr/bin/nmap"
-		self.arpspoof_path = "/usr/sbin/arpspoof"
+		self.tshark_path = "/usr/bin/tshark"		
+		self.tcpdump_path = "/usr/sbin/tcpdump"
+		self.arpspoof_path = "/usr/sbin/arpspoof"	
 		self.phantomjs_path = "/usr/local/bin/phantomjs"
-		self.tshark_path = "/usr/bin/tshark"
-
-		self.services = {"active":self.active_scan,"passive":self.passive_scan,"filter":self.filter,"screen":self.screenshot}	
+		
+		self.services = {"active":self.active_scan, "passive":self.passive_scan, "filter":self.filter, "screen":self.screen}	
 
 		description = "Fener: Ligth your ways throug pentest ..."
                 usage = "Usage: use --help for futher information"
@@ -82,11 +79,10 @@ class Main:
 		parser.add_argument('-l', '--log', dest = 'log_file', action = 'store', help = 'Log File', metavar = 'FILE', default = "fener.log")				
                 parser.add_argument('-o', '--output', dest = 'output', action = 'store', help = 'Output File', metavar = 'FILE', default = "fener.out")		
 		parser.add_argument('-d', '--passive_timeout', dest = 'passive_timeout', action = 'store', help = 'Passive Scan Timeout Value', default = 15, type = int)
-		parser.add_argument('-m', '--mim', dest = 'mim', action = 'store', help = 'Man In The Middle')
+		parser.add_argument('-m', '--mim', dest = 'mim', action = 'store_true', help = 'Man In The Middle')
 
 		parser.add_argument('options', nargs='*', action = AddressAction)
-		#parser.add_argument('--verbose', '-v', action = 'store', dest = 'verbose', type = int)
-
+	
 		try:
                 	self.args = parser.parse_args()
 		except Exception, err:
@@ -108,13 +104,15 @@ class Main:
 
 		self.thread_list = []		
 		self.ip_list = []
-		try:
-			iprange = IpRange()
-			for ip in iprange.iprange(self.args.target):
-				self.ip_list.append(ip)
-		except:
-			print >> sys.stderr, "Please use IP/CIDR notation. <192.168.37.37/32, 192.168.1.0/24>"
-			sys.exit(1)
+		
+		if self.args.target:
+			try:
+				iprange = IpRange()
+				for ip in iprange.iprange(self.args.target):
+					self.ip_list.append(ip)
+			except:
+				print >> sys.stderr, "Please use IP/CIDR notation. <192.168.37.37/32, 192.168.1.0/24>"
+				sys.exit(1)
 		
 		self.output_dir = "output" + "/" + self.args.project
 		if not os.path.isdir(self.output_dir):
@@ -132,7 +130,11 @@ class Main:
 	def active_scan(self):
 
 		""" Nmap Port Scan """
-		
+			
+		if not os.path.exists(self.nmap_path):
+			print >> sys.stderr, "%s Doesn't Exists on the System !!!"% self.nmap_path			
+			sys.exit(1)
+
 		self.nmap = Nmap(self.nmap_path, self.output_dir, self.args.thread)
 	
 		ports = self.cfg["scan"]
@@ -171,11 +173,11 @@ class Main:
                 stdout_value = str(proc.communicate())
 
 
-	def screenshot(self):
+	def screen(self):
 		
 		""" Take ScreenShot """
 		
-		for rasterize_file in self.phantomjs_path, self.args.rasterize:
+		for rasterize_file in self.phantomjs_path, self.args.rasterize, self.nmap_path:
 			if not os.path.exists(rasterize_file):
 				print >> sys.stderr, "%s Doesn't Exists On The System !!!"% rasterize_file
 				sys.exit(1)
@@ -237,19 +239,62 @@ class Main:
 			pool.add_task(self.run_phantomjs, phantomjs_cmd)			
 
 		pool.wait_completion()
-		
-
+	
 
 	def passive_scan(self):
 
 		""" Run tcpdump to sniff network traffic """
+	
+		pcap_output_dir = self.output_dir + "/pcap/"
 
-		proc = subprocess.Popen([self.tcpdump_path,"-tttnn","-i",self.args.interface,"-s", "0", "-w", "kaydetp.pcap"] , stdout=subprocess.PIPE,)
-                stdout_value = str(proc.communicate())
+		if not os.path.isdir(pcap_output_dir):
+			try:
+				os.makedirs(pcap_output_dir)
+			except Exception, err:
+				print >> sys.sdterr, err
+				sys.exit(1)
 
+		now = datetime.datetime.now()
+		pcap_time = now.strftime("%Y%m%d%H%M") 
 		
-	def arpspoof(self):
-		pass
+		if not pcap_output_dir[0] == "/":
+			pcap_output_dir = os.getcwd() + "/" + pcap_output_dir
+	
+		output_file = pcap_output_dir + "fener-" + pcap_time + ".pcap"
+
+		proc = subprocess.Popen([self.tcpdump_path, "-tttnn", "-i", self.args.interface, "-w", output_file] , shell = False, stderr = subprocess.PIPE,)
+
+		if self.args.mim:
+			with open('/proc/sys/net/ipv4/ip_forward', 'w') as ipf:
+        			ipf.write('1\n')
+
+			arpspoof_proc = subprocess.Popen([self.arpspoof_path,"-i",self.args.interface,"192.168.231.2"], shell = False, stderr = subprocess.PIPE, )
+		
+		counter = 0;
+		time_wait = 5
+		progress = 100/(self.args.passive_timeout/time_wait);	
+
+		start_time = time.time()
+		while ( (time.time() - start_time) <  self.args.passive_timeout ):			
+			sys.stdout.write('\r')
+			
+			if ( progress < (100 - (progress*counter))):
+    				sys.stdout.write("[%-20s] %d%%" % ('='*(counter*progress), progress*counter))
+			else:
+				sys.stdout.write("[%-20s] %d%%" % ('='*(counter*progress), 100))    			
+				sys.stdout.write('\n')			
+			
+			sys.stdout.flush()
+			counter = counter + 1
+	
+			time.sleep(time_wait)
+    	
+		proc.kill()
+		
+		if self.args.mim:
+			arpspoof_proc.kill()
+
+
 	
 	def filter(self):
 		pass
@@ -257,6 +302,10 @@ class Main:
 
 	def run(self, scan_type):
 	
+		if os.geteuid() != 0:
+			print "Please Run as ROOT !!!"
+			sys.exit(1)
+
 		signal.signal(signal.SIGINT, self.signal_handler)
 		
 		if not scan_type in self.services.keys():

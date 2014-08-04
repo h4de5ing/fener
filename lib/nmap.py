@@ -102,7 +102,7 @@ class Nmap:
 		nmap_scan_option = "-n -Pn -T4 -sV %s --open --host-timeout=10m --max-rtt-timeout=600ms --initial-rtt-timeout=300ms --min-rtt-timeout=300ms --max-retries=2 --min-rate=150 -iL %s -oA %s"% (port_list, ip_file_name, output_file)
 
                 run_nmap = "%s %s"% (self.nmap, nmap_scan_option)
-		##print run_nmap			
+		#print run_nmap			
 
                 proc = subprocess.Popen([run_nmap], shell=True, stdout=subprocess.PIPE,)
                 stdout_value = str(proc.communicate())
