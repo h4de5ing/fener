@@ -282,7 +282,7 @@ class Main:
     				sys.stdout.write("[%-20s] %d%%" % ('='*(counter*progress), progress*counter))
 			else:
 				sys.stdout.write("[%-20s] %d%%" % ('='*(counter*progress), 100))    			
-				sys.stdout.write('\n')			
+				sys.stdout.write('\n\n')			
 			
 			sys.stdout.flush()
 			counter = counter + 1
