@@ -1,4 +1,6 @@
-<<<<<<< HEAD
+![](https://github.com/galkan/fener/blob/master/images/fener_desc3.png "Fener")  
+
+
 FENER - Automated Information Gathering Tool for Penetration Testers 
 =====
 
