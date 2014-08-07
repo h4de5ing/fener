@@ -140,8 +140,11 @@ class Main:
 		self.nmap = Nmap(self.nmap_path, self.output_dir, self.args.thread)
 	
 		ports = self.cfg["scan"]
-		script = self.cfg["script"]
-
+		try:
+			script = self.cfg["script"]
+		except:
+			script = None
+			
 		alive_hosts = self.nmap.ping_scan(self.args.target)
 		try:
 			t1 = Thread(target = self.nmap.os_scan, args = (alive_hosts,))
@@ -152,9 +155,10 @@ class Main:
 			t2.start()	
 			self.thread_list.append(t2)
 
-			t3 = Thread(target = self.nmap.script_scan, args = (alive_hosts, script, ports,))
-			t3.start()
-			self.thread_list.append(t3)
+			if script is not None:
+				t3 = Thread(target = self.nmap.script_scan, args = (alive_hosts, script, ports,))
+				t3.start()
+				self.thread_list.append(t3)
 		except Exception, err:
 			print >> sys.stderr, err
 			sys.exit(1)
