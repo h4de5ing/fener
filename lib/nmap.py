@@ -1,9 +1,8 @@
 
 __VERSION__ = '0.1'
 __AUTHOR__ = 'Galkan'
-__DATE__ = '20.07.2014'
+__DATE__ = '06.08.2014'
 
-#https://github.com/argp/nmapdb/blob/master/nmapdb.pys
 
 try:
 	import re
@@ -102,13 +101,11 @@ class Nmap:
 		nmap_scan_option = "-n -Pn -T4 -sV %s --open --host-timeout=10m --max-rtt-timeout=600ms --initial-rtt-timeout=300ms --min-rtt-timeout=300ms --max-retries=2 --min-rate=150 -iL %s -oA %s"% (port_list, ip_file_name, output_file)
 
                 run_nmap = "%s %s"% (self.nmap, nmap_scan_option)
-		#print run_nmap			
-
+	
                 proc = subprocess.Popen([run_nmap], shell=True, stdout=subprocess.PIPE,)
                 stdout_value = str(proc.communicate())
 
 		nmap_result_file = output_file + ".xml"
-		#XmlParser.parser(nmap_result_file)
 		
 
 	
@@ -125,17 +122,15 @@ class Nmap:
 		ip_file.seek(0)	
 		ip_file_name = ip_file.name
 
-		nmap_scan_option = "-n -Pn -T4 -O -iL %s -oA %s"% (ip_file_name, output_file)
+		nmap_scan_option = "-n -Pn -T4 -O -iL %s -oA %s 2>/dev/null"% (ip_file_name, output_file)
 				
 		run_nmap = "%s %s"% (self.nmap, nmap_scan_option)
-		##print run_nmap
-	
-		#proc = subprocess.Popen([run_nmap], shell=True, stdout=subprocess.PIPE,)
-                #stdout_value = str(proc.communicate())
 		
-		#nmap_result_file = output_file + ".xml"
-		#XmlParser.parser(nmap_result_file)
-	
+		proc = subprocess.Popen([run_nmap], shell=True, stdout=subprocess.PIPE,)
+                stdout_value = str(proc.communicate())
+		
+		nmap_result_file = output_file + ".xml"
+		
 
 	def script_scan(self, ip_file, script, ports):	
 
@@ -153,11 +148,9 @@ class Nmap:
 		nmap_scan_option = "-n -Pn --script=default,%s %s --host-timeout=10m --max-rtt-timeout=600ms --initial-rtt-timeout=300ms --min-rtt-timeout=300ms --max-retries=2 --min-rate=150 -iL %s -oA %s"% (script, ports, ip_file_name, output_file)
 				
 		run_nmap = "%s %s"% (self.nmap, nmap_scan_option)
-		##print run_nmap
 
-		#proc = subprocess.Popen([run_nmap], shell=True, stdout=subprocess.PIPE,)
-                #stdout_value = str(proc.communicate())
+		proc = subprocess.Popen([run_nmap], shell=True, stdout=subprocess.PIPE,)
+                stdout_value = str(proc.communicate())
 
-		#nmap_result_file = output_file + ".xml"	
-		#XmlParser.parser(nmap_result_file)
+		nmap_result_file = output_file + ".xml"	
 		

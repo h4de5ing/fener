@@ -1,7 +1,7 @@
 
 __VERSION__ = '0.1'
 __AUTHOR__ = 'Galkan'
-__DATE__ = '20.07.2014'
+__DATE__ = '06.08.2014'
 
 
 try:
@@ -9,6 +9,8 @@ try:
 	import re
 	import sys
 	import time
+	import socket
+	import struct
 	import signal
 	import tempfile
 	import datetime
@@ -241,10 +243,26 @@ class Main:
 		pool.wait_completion()
 	
 
+
+	def get_default_gw(self):
+
+		try:
+			with open("/proc/net/route") as fh:
+        			for line in fh:
+            				fields = line.strip().split()
+					if fields[1] != '00000000' or not int(fields[3], 16) & 2:
+                				continue
+
+            				return socket.inet_ntoa(struct.pack("<L", int(fields[2], 16)))
+		except:
+			return None
+
+
 	def passive_scan(self):
 
 		""" Run tcpdump to sniff network traffic """
-	
+
+			
 		pcap_output_dir = self.output_dir + "/pcap/"
 
 		if not os.path.isdir(pcap_output_dir):
@@ -268,7 +286,9 @@ class Main:
 			with open('/proc/sys/net/ipv4/ip_forward', 'w') as ipf:
         			ipf.write('1\n')
 
-			arpspoof_proc = subprocess.Popen([self.arpspoof_path,"-i",self.args.interface,"192.168.231.2"], shell = False, stderr = subprocess.PIPE, )
+			default_gw = self.get_default_gw() 
+			if default_gw is not None:
+				arpspoof_proc = subprocess.Popen([self.arpspoof_path,"-i",self.args.interface, default_gw], shell = False, stdout = subprocess.PIPE,)
 		
 		counter = 0;
 		time_wait = 5
@@ -291,13 +311,17 @@ class Main:
     	
 		proc.kill()
 		
-		if self.args.mim:
+		if self.args.mim and default_gw is not None:			
 			arpspoof_proc.kill()
 
 
 	
-	def filter(self):
-		pass
+	def filter(self, pcap_dir):
+		
+		""" Filter Pcap File using Tshark """
+
+		for subdir, dirs, files in os.walk(pcap_dir):
+			print subdir, dirs, files
 	
 
 	def run(self, scan_type):
